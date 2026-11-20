@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<TaskItem> _q4 = new();
     private readonly ObservableCollection<TaskItem> _agenda = new();
     private readonly ObservableCollection<TaskItem> _allTasks = new();
+    private readonly ObservableCollection<TaskItem> _trayTasks = new();
     private readonly DesktopHost _desktopHost = new();
 
     private readonly DispatcherTimer _clockTimer = new() { Interval = TimeSpan.FromSeconds(20) };
@@ -51,6 +53,8 @@ public partial class MainWindow : Window
     private bool _widgetHidden;
     private Rect _hiddenScreenRect;
     private bool _desktopAttachFailed;
+    private ScaleTransform _uiScaleTransform = new(1, 1);
+    private bool _updatingAppearance;
     private bool _updatingTimerModeTabs;
     private bool _updatingFocusChoices;
     private bool _deleteArmed;
@@ -63,6 +67,7 @@ public partial class MainWindow : Window
 
     private TaskItem? _editingTask;
     private string _allFilter = "pending";
+    private bool _taskTrayOpen;
     private DateTime _calendarMonth;
     private DateTime _selectedDate;
 
@@ -73,12 +78,17 @@ public partial class MainWindow : Window
         _data = Store.Load();
         _data.Settings.AutoStart = StartupManager.IsEnabled();
 
+        ThemeManager.Apply(_data.Settings);
+        Shell.Background = ThemeManager.CreateShellBrush(_data.Settings.CardOpacity);
+        RootGrid.LayoutTransform = new ScaleTransform(_data.Settings.UiScale, _data.Settings.UiScale);
+
         Q1List.ItemsSource = _q1;
         Q2List.ItemsSource = _q2;
         Q3List.ItemsSource = _q3;
         Q4List.ItemsSource = _q4;
         AgendaList.ItemsSource = _agenda;
         AllTasksList.ItemsSource = _allTasks;
+        TrayTasksList.ItemsSource = _trayTasks;
 
         _calendarMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         _selectedDate = DateTime.Today;
@@ -174,12 +184,14 @@ public partial class MainWindow : Window
     private void SetInitialWindowBounds()
     {
         var work = SystemParameters.WorkArea;
-        var height = Math.Max(MinHeight, Math.Min(700, work.Height - 24));
-        Height = height;
-        Width = 420;
+        var scale = Math.Clamp(_data.Settings.UiScale, 0.9, 1.2);
+        var desiredWidth = 420 * scale;
+        var desiredHeight = 700 * scale;
+        Width = desiredWidth;
+        Height = Math.Max(MinHeight, Math.Min(desiredHeight, work.Height - 24));
 
         var left = _data.Settings.WindowLeft ?? work.Right - Width - 24;
-        var top = _data.Settings.WindowTop ?? work.Top + (work.Height - height) / 2;
+        var top = _data.Settings.WindowTop ?? work.Top + (work.Height - Height) / 2;
 
         var virtualLeft = SystemParameters.VirtualScreenLeft;
         var virtualTop = SystemParameters.VirtualScreenTop;
@@ -188,6 +200,65 @@ public partial class MainWindow : Window
 
         Left = Math.Clamp(left, virtualLeft + 8, Math.Max(virtualLeft + 8, virtualRight - Width - 8));
         Top = Math.Clamp(top, virtualTop + 8, Math.Max(virtualTop + 8, virtualBottom - Height - 8));
+    }
+
+    private void ApplyTheme(bool refresh)
+    {
+        ThemeManager.Apply(_data.Settings);
+        Shell.Background = ThemeManager.CreateShellBrush(_data.Settings.CardOpacity);
+        if (refresh)
+        {
+            RefreshAll();
+            UpdateTimerUi();
+        }
+    }
+
+    private void UpdateShellBackground()
+    {
+        Shell.Background = ThemeManager.CreateShellBrush(_data.Settings.CardOpacity);
+    }
+
+    private void ApplyUiScale(bool resizeWindow)
+    {
+        var scale = Math.Clamp(_data.Settings.UiScale, 0.9, 1.2);
+        _uiScaleTransform.ScaleX = scale;
+        _uiScaleTransform.ScaleY = scale;
+        RootGrid.LayoutTransform = _uiScaleTransform;
+
+        if (!resizeWindow) return;
+
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var screenRect = _desktopHost.GetScreenRect();
+        if (screenRect == Rect.Empty)
+            screenRect = new Rect(Left, Top, ActualWidth, ActualHeight);
+
+        var newWidth = 420 * scale;
+        var newHeight = Math.Max(MinHeight, Math.Min(700 * scale, SystemParameters.WorkArea.Height - 24));
+        var newWidthPx = newWidth * dpi.DpiScaleX;
+        var newHeightPx = newHeight * dpi.DpiScaleY;
+
+        var centerX = screenRect.Left + screenRect.Width / 2;
+        var centerY = screenRect.Top + screenRect.Height / 2;
+        var left = (int)Math.Round(centerX - newWidthPx / 2);
+        var top = (int)Math.Round(centerY - newHeightPx / 2);
+
+        var screen = WinForms.Screen.FromPoint(new Drawing.Point((int)centerX, (int)centerY));
+        var work = screen.WorkingArea;
+        left = Math.Clamp(left, work.Left, Math.Max(work.Left, work.Right - (int)newWidthPx));
+        top = Math.Clamp(top, work.Top, Math.Max(work.Top, work.Bottom - (int)newHeightPx));
+
+        Width = newWidth;
+        Height = newHeight;
+        if (_desktopHost.IsAttached)
+        {
+            _desktopHost.MoveToScreen(left, top, (int)newWidthPx, (int)newHeightPx);
+        }
+        else
+        {
+            Left = left / dpi.DpiScaleX;
+            Top = top / dpi.DpiScaleY;
+        }
+        SaveWindowPosition();
     }
 
     private void ApplyDesktopMode(bool showToast)
@@ -577,20 +648,84 @@ public partial class MainWindow : Window
     private void ApplySettingsToUi()
     {
         _initializing = true;
+        _updatingAppearance = true;
         DesktopModeSwitch.IsChecked = _data.Settings.DesktopMode;
         AlwaysOnTopSwitch.IsChecked = _data.Settings.AlwaysOnTop;
         AutoStartSwitch.IsChecked = _data.Settings.AutoStart;
         SoundSwitch.IsChecked = _data.Settings.SoundEnabled;
         AutoNextSwitch.IsChecked = _data.Settings.AutoStartNext;
+
+        ThemeDarkTab.IsChecked = _data.Settings.Theme != "Light";
+        ThemeLightTab.IsChecked = _data.Settings.Theme == "Light";
+        foreach (var swatch in AccentSwatchesPanel.Children.OfType<RadioButton>())
+            swatch.IsChecked = string.Equals(swatch.Tag as string, _data.Settings.AccentColor,
+                StringComparison.OrdinalIgnoreCase);
+        OpacitySlider.Value = Math.Round(_data.Settings.CardOpacity * 100);
+        OpacityValueText.Text = $"{OpacitySlider.Value:0}%";
+        foreach (var item in ScaleCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (double.TryParse(item.Tag?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture,
+                    out var scale) && Math.Abs(scale - _data.Settings.UiScale) < 0.001)
+            {
+                ScaleCombo.SelectedItem = item;
+                break;
+            }
+        }
+        if (ScaleCombo.SelectedItem == null)
+            ScaleCombo.SelectedItem = ScaleCombo.Items.OfType<ComboBoxItem>().FirstOrDefault();
+
         FocusMinutesBox.Text = _data.Settings.FocusMinutes.ToString();
         ShortBreakBox.Text = _data.Settings.ShortBreakMinutes.ToString();
         LongBreakBox.Text = _data.Settings.LongBreakMinutes.ToString();
         AlwaysOnTopSwitch.IsEnabled = !_data.Settings.DesktopMode;
         DataPathText.Text = AppPaths.DataDirectory;
         DataPathText.ToolTip = AppPaths.DataDirectory;
-        VersionText.Text = $"云笺 v1.0 · 本地优先 · 数据保存于 {AppPaths.DataDirectory}";
+        VersionText.Text = $"云笺 v1.1 · 本地优先 · 数据保存于 {AppPaths.DataDirectory}";
+        _updatingAppearance = false;
         _initializing = false;
         UpdateSettingsLabels();
+    }
+
+    private void Theme_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_initializing || _updatingAppearance ||
+            sender is not RadioButton { IsChecked: true, Tag: string theme }) return;
+        if (theme != "Light" && theme != "Dark") return;
+        if (_data.Settings.Theme == theme) return;
+        _data.Settings.Theme = theme;
+        ApplyTheme(true);
+        QueueSave();
+    }
+
+    private void Accent_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_initializing || _updatingAppearance ||
+            sender is not RadioButton { IsChecked: true, Tag: string accent }) return;
+        if (_data.Settings.AccentColor.Equals(accent, StringComparison.OrdinalIgnoreCase)) return;
+        _data.Settings.AccentColor = accent;
+        ApplyTheme(true);
+        QueueSave();
+    }
+
+    private void Opacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_initializing || _updatingAppearance) return;
+        var value = Math.Round(OpacitySlider.Value);
+        OpacityValueText.Text = $"{value:0}%";
+        _data.Settings.CardOpacity = value / 100.0;
+        UpdateShellBackground();
+        QueueSave();
+    }
+
+    private void Scale_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_initializing || _updatingAppearance || ScaleCombo.SelectedItem is not ComboBoxItem item) return;
+        if (!double.TryParse(item.Tag?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture,
+                out var scale)) return;
+        if (Math.Abs(_data.Settings.UiScale - scale) < 0.001) return;
+        _data.Settings.UiScale = scale;
+        ApplyUiScale(true);
+        QueueSave();
     }
 
     private void UpdateSettingsLabels()
@@ -763,7 +898,8 @@ public partial class MainWindow : Window
             "pomodoro" => PomodoroView,
             _ => QuadrantView
         };
-        view.BeginAnimation(OpacityProperty, new DoubleAnimation(0.35, 1, TimeSpan.FromMilliseconds(180)));
+        view.BeginAnimation(OpacityProperty, null);
+        view.Opacity = 1;
 
         if (target == "calendar") RefreshCalendar();
         else if (target == "pomodoro")

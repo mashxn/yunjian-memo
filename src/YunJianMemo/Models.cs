@@ -271,6 +271,10 @@ public class AppSettings
     public bool SoundEnabled { get; set; } = true;
     public bool AutoStartNext { get; set; }
     public bool SnapToEdge { get; set; } = true;
+    public string Theme { get; set; } = "Dark";
+    public string AccentColor { get; set; } = "#6EE7D8";
+    public double CardOpacity { get; set; } = 0.96;
+    public double UiScale { get; set; } = 1.0;
     public int FocusMinutes { get; set; } = 25;
     public int ShortBreakMinutes { get; set; } = 5;
     public int LongBreakMinutes { get; set; } = 15;

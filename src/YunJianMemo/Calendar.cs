@@ -37,6 +37,44 @@ public partial class MainWindow
         MonthText.Text = _calendarMonth.ToString("yyyy年M月");
         BuildCalendarGrid();
         RefreshAgenda();
+        RefreshTaskTray();
+    }
+
+    private void RefreshTaskTray()
+    {
+        var items = _data.Tasks
+            .Where(t => !t.IsDone)
+            .OrderBy(t => t.DueAt ?? DateTime.MaxValue)
+            .ThenBy(t => t.CreatedAt)
+            .ToList();
+
+        _trayTasks.Clear();
+        foreach (var item in items) _trayTasks.Add(item);
+
+        TrayToggleButton.Content = $"待办 {items.Count} ▾";
+        TrayToggleButton.IsEnabled = items.Count > 0;
+        TrayEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (items.Count == 0)
+        {
+            _taskTrayOpen = false;
+            TaskTray.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            TaskTray.Visibility = _taskTrayOpen ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private void ToggleTaskTray_Click(object sender, RoutedEventArgs e)
+    {
+        _taskTrayOpen = !_taskTrayOpen;
+        RefreshTaskTray();
+    }
+
+    private void CloseTaskTray_Click(object sender, RoutedEventArgs e)
+    {
+        _taskTrayOpen = false;
+        TaskTray.Visibility = Visibility.Collapsed;
     }
 
     private void BuildCalendarGrid()
@@ -63,22 +101,27 @@ public partial class MainWindow
                 Tag = date,
                 Height = 30,
                 Background = isSelected
-                    ? new SolidColorBrush(Color.FromArgb(42, 110, 231, 216))
+                    ? ThemeManager.Get("CalendarSelectedBrush")
                     : Brushes.Transparent
             };
             if (isSelected)
             {
-                cell.BorderBrush = new SolidColorBrush(Color.FromArgb(120, 110, 231, 216));
+                cell.BorderBrush = ThemeManager.Get("CalendarSelectedBorderBrush");
                 cell.BorderThickness = new Thickness(1);
             }
             else if (isToday)
             {
-                cell.BorderBrush = new SolidColorBrush(Color.FromArgb(80, 110, 231, 216));
+                cell.BorderBrush = ThemeManager.Get("CalendarTodayBorderBrush");
                 cell.BorderThickness = new Thickness(1);
             }
 
             cell.Opacity = inMonth || isSelected ? 1 : 0.34;
             cell.MouseLeftButtonUp += CalendarDay_Click;
+            cell.AllowDrop = true;
+            cell.DragEnter += CalendarCell_DragEnter;
+            cell.DragOver += CalendarCell_DragOver;
+            cell.DragLeave += CalendarCell_DragLeave;
+            cell.Drop += CalendarCell_Drop;
 
             var content = new Grid();
             var dayText = new TextBlock
@@ -87,10 +130,10 @@ public partial class MainWindow
                 FontSize = 10.5,
                 FontFamily = (FontFamily)FindResource("NumberFont"),
                 Foreground = isSelected
-                    ? new SolidColorBrush(Color.FromRgb(207, 251, 245))
+                    ? ThemeManager.Get("TextBrush")
                     : isToday
-                        ? new SolidColorBrush(Color.FromRgb(110, 231, 216))
-                        : new SolidColorBrush(Color.FromRgb(164, 179, 198)),
+                        ? ThemeManager.Get("AccentTextBrush")
+                        : ThemeManager.Get("CalendarDayTextBrush"),
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Top,
                 Margin = new Thickness(0, 3, 0, 0)
@@ -126,7 +169,7 @@ public partial class MainWindow
                     {
                         Text = "+",
                         FontSize = 7,
-                        Foreground = new SolidColorBrush(Color.FromRgb(120, 137, 158)),
+                        Foreground = ThemeManager.Get("MutedBrush"),
                         Margin = new Thickness(1, -3, 0, 0)
                     });
                 }

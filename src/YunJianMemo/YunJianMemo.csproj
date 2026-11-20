@@ -11,8 +11,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>YunJianMemo</AssemblyName>
     <RootNamespace>YunJianMemo</RootNamespace>
-    <Version>1.0.0</Version>
-    <FileVersion>1.0.0.0</FileVersion>
+    <Version>1.1.0</Version>
+    <FileVersion>1.1.0.0</FileVersion>
     <Product>云笺 · 桌面备忘录</Product>
     <Description>四象限任务、日历日程与番茄钟一体的 Windows 桌面组件</Description>
     <Authors>YunJian</Authors>

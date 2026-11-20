@@ -368,6 +368,12 @@ public partial class MainWindow
 
     private void TaskRow_Click(object sender, MouseButtonEventArgs e)
     {
+        _taskDragCandidate = null;
+        if (_suppressTaskClick)
+        {
+            _suppressTaskClick = false;
+            return;
+        }
         if (IsInteractiveSource(e.OriginalSource)) return;
         if (sender is not FrameworkElement { DataContext: TaskItem task }) return;
         e.Handled = true;

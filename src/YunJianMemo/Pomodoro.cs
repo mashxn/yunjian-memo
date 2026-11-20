@@ -260,7 +260,7 @@ public partial class MainWindow
     {
         var accent = _timerMode switch
         {
-            TimerMode.Focus => Palette.Frozen(Palette.AccentHex),
+            TimerMode.Focus => ThemeManager.AccentBrush,
             TimerMode.ShortBreak => Palette.Frozen(Palette.AmberHex),
             _ => Palette.Frozen(Palette.VioletHex)
         };
@@ -304,7 +304,7 @@ public partial class MainWindow
 
         var accent = _timerMode switch
         {
-            TimerMode.Focus => Palette.Frozen(Palette.AccentHex),
+            TimerMode.Focus => ThemeManager.AccentBrush,
             TimerMode.ShortBreak => Palette.Frozen(Palette.AmberHex),
             _ => Palette.Frozen(Palette.VioletHex)
         };
@@ -316,7 +316,7 @@ public partial class MainWindow
                 Width = 5,
                 Height = 5,
                 Margin = new Thickness(2, 0, 2, 0),
-                Fill = i < cycle ? accent : new SolidColorBrush(Color.FromArgb(38, 255, 255, 255))
+                Fill = i < cycle ? accent : ThemeManager.Get("SessionDotOffBrush")
             });
         }
     }

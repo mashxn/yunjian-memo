@@ -3,10 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:YunJianMemo.Controls"
         Title="云笺 · 桌面备忘录"
-        Width="420" Height="700" MinWidth="380" MinHeight="520"
+        Width="420" Height="700" MinWidth="340" MinHeight="480"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" ShowInTaskbar="False" WindowStartupLocation="Manual"
-        FontFamily="{StaticResource UiFont}" Foreground="{StaticResource TextBrush}"
+        FontFamily="{StaticResource UiFont}" Foreground="{DynamicResource TextBrush}"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         Loaded="Window_Loaded" Closing="Window_Closing"
         Icon="Assets/app.ico">
@@ -15,7 +15,15 @@
 
         <DataTemplate x:Key="TaskMiniTemplate">
             <Border Background="Transparent" Padding="0,4" MinHeight="38" Cursor="Hand"
-                    MouseLeftButtonUp="TaskRow_Click" ToolTip="{Binding DueFull}">
+                    MouseLeftButtonUp="TaskRow_Click" MouseLeftButtonDown="TaskDrag_MouseLeftButtonDown"
+                    MouseMove="TaskDrag_MouseMove">
+                <Border.ToolTip>
+                    <StackPanel>
+                        <TextBlock Text="{Binding DueFull}" FontSize="10" />
+                        <TextBlock Text="拖动到其他象限可调整优先级" FontSize="9"
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </Border.ToolTip>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="22" />
@@ -27,11 +35,11 @@
                         <TextBlock Text="{Binding Title}" FontSize="11.8" TextTrimming="CharacterEllipsis">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="#E6EDF6" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsDone}" Value="True">
                                             <Setter Property="TextDecorations" Value="Strikethrough" />
-                                            <Setter Property="Foreground" Value="#6A7688" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TaskDoneBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -40,10 +48,10 @@
                         <TextBlock Text="{Binding DueCompact}" FontSize="8.8" Margin="0,2,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="#74849A" />
+                                    <Setter Property="Foreground" Value="{DynamicResource SubTextBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                                            <Setter Property="Foreground" Value="{StaticResource CoralBrush}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource CoralBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -54,8 +62,34 @@
             </Border>
         </DataTemplate>
 
+        <DataTemplate x:Key="DragChipTemplate">
+            <Border Width="104" MinHeight="46" Margin="0,0,7,7" Padding="9,6" CornerRadius="10" Cursor="Hand"
+                    Background="{DynamicResource SurfaceBackgroundBrush}"
+                    BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1"
+                    MouseLeftButtonDown="TaskDrag_MouseLeftButtonDown" MouseMove="TaskDrag_MouseMove"
+                    ToolTip="拖到上方日期，修改截止日期">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="5" Height="5" Fill="{Binding QuadrantBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Title}" FontSize="10.6" Foreground="{DynamicResource TextBrush}"
+                                   TextTrimming="CharacterEllipsis" Margin="5,0,0,0" MaxWidth="80" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding DueCompact}" FontSize="8.3" Foreground="{DynamicResource MutedBrush}"
+                               Margin="10,2,0,0" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <DataTemplate x:Key="AgendaTemplate">
-            <Border x:Name="AgendaRoot" Background="Transparent" Padding="2,4" Cursor="Hand" MouseLeftButtonUp="TaskRow_Click">
+            <Border x:Name="AgendaRoot" Background="Transparent" Padding="2,4" Cursor="Hand" MouseLeftButtonUp="TaskRow_Click"
+                    MouseLeftButtonDown="TaskDrag_MouseLeftButtonDown" MouseMove="TaskDrag_MouseMove">
+                <Border.ToolTip>
+                    <StackPanel>
+                        <TextBlock Text="{Binding DueFull}" FontSize="10" />
+                        <TextBlock Text="拖动到其他日期可修改截止时间" FontSize="9"
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </Border.ToolTip>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="44" />
@@ -64,13 +98,13 @@
                         <ColumnDefinition Width="24" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding TimeShort}" FontSize="10.5" FontFamily="{StaticResource NumberFont}"
-                               Foreground="#93A2B8" VerticalAlignment="Center" />
+                               Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
                     <Border Grid.Column="1" Width="3" Height="22" CornerRadius="2"
                             Background="{Binding QuadrantBrush}" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="2" Margin="8,0,4,0" VerticalAlignment="Center">
-                        <TextBlock x:Name="AgendaTitle" Text="{Binding Title}" FontSize="12" Foreground="#E8EFF8"
+                        <TextBlock x:Name="AgendaTitle" Text="{Binding Title}" FontSize="12" Foreground="{DynamicResource TextBrush}"
                                    TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding QuadrantLabel}" FontSize="9" Foreground="#6F7E93" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding QuadrantLabel}" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="0,2,0,0" />
                     </StackPanel>
                     <CheckBox Grid.Column="3" Style="{StaticResource TaskCheck}" IsChecked="{Binding IsDone, Mode=TwoWay}"
                               VerticalAlignment="Center" Click="TaskCheck_Click" ToolTip="标记完成" />
@@ -79,7 +113,7 @@
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsDone}" Value="True">
                     <Setter TargetName="AgendaTitle" Property="TextDecorations" Value="Strikethrough" />
-                    <Setter TargetName="AgendaTitle" Property="Foreground" Value="#6A7688" />
+                    <Setter TargetName="AgendaTitle" Property="Foreground" Value="{DynamicResource TaskDoneBrush}" />
                     <Setter TargetName="AgendaRoot" Property="Opacity" Value="0.58" />
                 </DataTrigger>
             </DataTemplate.Triggers>
@@ -100,11 +134,11 @@
                         <TextBlock Text="{Binding Title}" FontSize="12" TextTrimming="CharacterEllipsis">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="#E8EFF8" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsDone}" Value="True">
                                             <Setter Property="TextDecorations" Value="Strikethrough" />
-                                            <Setter Property="Foreground" Value="#6A7688" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TaskDoneBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -112,12 +146,12 @@
                         </TextBlock>
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                             <Ellipse Width="5" Height="5" Fill="{Binding QuadrantBrush}" VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding QuadrantLabel}" FontSize="9" Foreground="#6F7E93" Margin="5,0,0,0" />
-                            <TextBlock Text="{Binding DueCompact}" FontSize="9" Foreground="#7C8AA0" Margin="8,0,0,0" />
+                            <TextBlock Text="{Binding QuadrantLabel}" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="5,0,0,0" />
+                            <TextBlock Text="{Binding DueCompact}" FontSize="9" Foreground="{DynamicResource SubTextBrush}" Margin="8,0,0,0" />
                         </StackPanel>
                     </StackPanel>
                     <TextBlock Grid.Column="2" Text="&#xE76C;" FontFamily="{StaticResource IconFont}" FontSize="9"
-                               Foreground="#4F5E73" VerticalAlignment="Center" />
+                               Foreground="{DynamicResource TextFaintBrush}" VerticalAlignment="Center" />
                 </Grid>
             </Border>
         </DataTemplate>
@@ -131,14 +165,8 @@
 
         <!-- 桌面卡片主体 -->
         <Border x:Name="Shell" CornerRadius="22" BorderThickness="1"
-                BorderBrush="#26FFFFFF" ClipToBounds="False">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#F5172030" Offset="0" />
-                    <GradientStop Color="#F50E141F" Offset="0.55" />
-                    <GradientStop Color="#F40B1018" Offset="1" />
-                </LinearGradientBrush>
-            </Border.Background>
+                Background="{DynamicResource CardBackgroundBrush}"
+                BorderBrush="{DynamicResource ShellBorderBrush}" ClipToBounds="False">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="30" ShadowDepth="6" Direction="270" Opacity="0.45" Color="#000000" />
             </Border.Effect>
@@ -175,10 +203,10 @@
                     <Grid Grid.Row="0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock x:Name="HeaderDateText" Text="11月20日 · 星期五" FontSize="10.5"
-                                       Foreground="{StaticResource SubTextBrush}" VerticalAlignment="Center" />
-                            <Border Width="3" Height="3" CornerRadius="2" Background="#3E4E63" Margin="7,0" />
+                                       Foreground="{DynamicResource SubTextBrush}" VerticalAlignment="Center" />
+                            <Border Width="3" Height="3" CornerRadius="2" Background="{DynamicResource TextFaintBrush}" Margin="7,0" />
                             <TextBlock x:Name="HeaderClockText" Text="14:52" FontSize="10.5"
-                                       FontFamily="{StaticResource NumberFont}" Foreground="#6F7E93" />
+                                       FontFamily="{StaticResource NumberFont}" Foreground="{DynamicResource MutedBrush}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,-4,-4,0">
                             <Button Style="{StaticResource IconButton}" Content="&#xE921;"
@@ -192,34 +220,34 @@
 
                     <Grid Grid.Row="1" Margin="0,6,0,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="云笺" FontSize="27" FontWeight="Bold" Foreground="#F4F9FD" />
-                            <Border Width="5" Height="5" CornerRadius="3" Background="{StaticResource AccentBrush}"
+                            <TextBlock Text="云笺" FontSize="27" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" />
+                            <Border Width="5" Height="5" CornerRadius="3" Background="{DynamicResource AccentBrush}"
                                     VerticalAlignment="Bottom" Margin="4,0,0,11" />
                             <TextBlock Text="DESKTOP MEMO" FontFamily="Segoe UI" FontSize="7.5"
-                                       Foreground="#4F6076" VerticalAlignment="Center" Margin="9,8,0,0" />
+                                       Foreground="{DynamicResource TextFaintBrush}" VerticalAlignment="Center" Margin="9,8,0,0" />
                         </StackPanel>
                         <Border x:Name="NextDueChip" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                Background="#0EFFFFFF" BorderBrush="#18FFFFFF" BorderThickness="1"
+                                Background="{DynamicResource SurfaceBackgroundBrush}" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1"
                                 CornerRadius="10" Padding="9,5" MaxWidth="176">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="5" Height="5" Fill="{StaticResource AmberBrush}" VerticalAlignment="Center" />
+                                <Ellipse Width="5" Height="5" Fill="{DynamicResource AmberBrush}" VerticalAlignment="Center" />
                                 <TextBlock x:Name="NextDueText" Text="今天没有截止任务" FontSize="9"
-                                           Foreground="#93A2B8" Margin="5,0,0,0" TextTrimming="CharacterEllipsis" />
+                                           Foreground="{DynamicResource SubTextBrush}" Margin="5,0,0,0" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </Border>
                     </Grid>
 
                     <Grid Grid.Row="2" Margin="0,7,0,0">
                         <TextBlock x:Name="HeaderSummaryText" Text="今天还有 0 件事" FontSize="10.5"
-                                   Foreground="#8291A6" />
+                                   Foreground="{DynamicResource SubTextBrush}" />
                         <TextBlock x:Name="HeaderProgressText" HorizontalAlignment="Right" FontSize="10"
-                                   Foreground="#5E6E84" />
+                                   Foreground="{DynamicResource MutedBrush}" />
                     </Grid>
                 </Grid>
 
                 <!-- 导航 -->
                 <Border Grid.Row="1" Margin="16,8,16,4" Height="42" CornerRadius="13"
-                        Background="#0BFFFFFF" BorderBrush="#14FFFFFF" BorderThickness="1" Padding="3">
+                        Background="{DynamicResource SurfaceBackgroundBrush}" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" Padding="3">
                     <UniformGrid Columns="3">
                         <RadioButton x:Name="NavQuadrant" Style="{StaticResource NavTab}" GroupName="Nav"
                                      Content="四象限" IsChecked="True" Checked="Nav_Checked" Tag="quadrant" />
@@ -241,12 +269,12 @@
                         </Grid.RowDefinitions>
                         <Grid Grid.Row="0" Margin="2,0,0,7">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="任务汇总" FontSize="12.5" FontWeight="SemiBold" Foreground="#DFE8F3" />
-                                <Border Background="#12FFFFFF" CornerRadius="7" Padding="7,2" Margin="8,0,0,0">
-                                    <TextBlock x:Name="PendingCountText" Text="0 项待办" FontSize="9" Foreground="#8C9BB0" />
+                                <TextBlock Text="任务汇总" FontSize="12.5" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                <Border Background="{DynamicResource SurfaceBackgroundBrush}" CornerRadius="7" Padding="7,2" Margin="8,0,0,0">
+                                    <TextBlock x:Name="PendingCountText" Text="0 项待办" FontSize="9" Foreground="{DynamicResource SubTextBrush}" />
                                 </Border>
                                 <TextBlock x:Name="CompletedCountText" Text="今日完成 0" FontSize="9"
-                                           Foreground="#5F6F85" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                           Foreground="{DynamicResource MutedBrush}" Margin="8,0,0,0" VerticalAlignment="Center" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button x:Name="AllTasksButton" Style="{StaticResource TextButton}" Content="全部任务"
@@ -266,8 +294,11 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <Border Grid.Row="0" Grid.Column="0" Margin="0,0,5,5" CornerRadius="15"
-                                    Background="#0CFFFFFF" BorderBrush="#20FF7A7A" BorderThickness="1">
+                            <Border Grid.Row="0" Grid.Column="0" Margin="0,0,5,5"
+                                    CornerRadius="15" Tag="1" AllowDrop="True"
+                                    DragEnter="Quadrant_DragEnter" DragOver="Quadrant_DragOver"
+                                    DragLeave="Quadrant_DragLeave" Drop="Quadrant_Drop"
+                                    Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource Q1BorderBrush}" BorderThickness="1">
                                 <Grid Margin="12,10,10,8">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -276,28 +307,31 @@
                                     </Grid.RowDefinitions>
                                     <Grid>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Ellipse Width="6" Height="6" Fill="{StaticResource CoralBrush}" />
+                                            <Ellipse Width="6" Height="6" Fill="{DynamicResource CoralBrush}" />
                                             <TextBlock Text="重要 · 紧急" FontSize="11.5" FontWeight="SemiBold"
-                                                       Foreground="#F0DEDE" Margin="6,0,0,0" />
+                                                       Foreground="{DynamicResource Q1TitleBrush}" Margin="6,0,0,0" />
                                         </StackPanel>
                                         <TextBlock x:Name="Q1Count" Text="0" HorizontalAlignment="Right"
-                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="#B67C7C" />
+                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="{DynamicResource Q1CountBrush}" />
                                     </Grid>
                                     <Grid Grid.Row="1" Margin="0,6,0,0">
                                         <ScrollViewer VerticalContentAlignment="Top" HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                             <ItemsControl x:Name="Q1List" ItemTemplate="{StaticResource TaskMiniTemplate}" />
                                         </ScrollViewer>
                                         <TextBlock x:Name="Q1Empty" Text="没有燃眉之急" FontSize="9.5"
-                                                   Foreground="#4F5D71" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFaintBrush}" HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" TextAlignment="Center" IsHitTestVisible="False" />
                                     </Grid>
                                     <TextBlock Grid.Row="2" Text="先处理 · 别让火继续烧" FontSize="8.5"
-                                               Foreground="#4B596D" Margin="1,4,0,0" />
+                                               Foreground="{DynamicResource TextFaintBrush}" Margin="1,4,0,0" />
                                 </Grid>
                             </Border>
 
-                            <Border Grid.Row="0" Grid.Column="1" Margin="5,0,0,5" CornerRadius="15"
-                                    Background="#0CFFFFFF" BorderBrush="#206EE7D8" BorderThickness="1">
+                            <Border Grid.Row="0" Grid.Column="1" Margin="5,0,0,5"
+                                    CornerRadius="15" Tag="2" AllowDrop="True"
+                                    DragEnter="Quadrant_DragEnter" DragOver="Quadrant_DragOver"
+                                    DragLeave="Quadrant_DragLeave" Drop="Quadrant_Drop"
+                                    Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource Q2BorderBrush}" BorderThickness="1">
                                 <Grid Margin="12,10,10,8">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -306,28 +340,31 @@
                                     </Grid.RowDefinitions>
                                     <Grid>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" />
+                                            <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" />
                                             <TextBlock Text="重要 · 不紧急" FontSize="11.5" FontWeight="SemiBold"
-                                                       Foreground="#D8EEEB" Margin="6,0,0,0" />
+                                                       Foreground="{DynamicResource Q2TitleBrush}" Margin="6,0,0,0" />
                                         </StackPanel>
                                         <TextBlock x:Name="Q2Count" Text="0" HorizontalAlignment="Right"
-                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="#79B7AD" />
+                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="{DynamicResource Q2CountBrush}" />
                                     </Grid>
                                     <Grid Grid.Row="1" Margin="0,6,0,0">
                                         <ScrollViewer VerticalContentAlignment="Top" HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                             <ItemsControl x:Name="Q2List" ItemTemplate="{StaticResource TaskMiniTemplate}" />
                                         </ScrollViewer>
                                         <TextBlock x:Name="Q2Empty" Text="长期价值放这里" FontSize="9.5"
-                                                   Foreground="#4F5D71" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFaintBrush}" HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" TextAlignment="Center" IsHitTestVisible="False" />
                                     </Grid>
                                     <TextBlock Grid.Row="2" Text="安排固定时间 · 持续投入" FontSize="8.5"
-                                               Foreground="#4B596D" Margin="1,4,0,0" />
+                                               Foreground="{DynamicResource TextFaintBrush}" Margin="1,4,0,0" />
                                 </Grid>
                             </Border>
 
-                            <Border Grid.Row="1" Grid.Column="0" Margin="0,5,5,0" CornerRadius="15"
-                                    Background="#0CFFFFFF" BorderBrush="#20FFC46B" BorderThickness="1">
+                            <Border Grid.Row="1" Grid.Column="0" Margin="0,5,5,0"
+                                    CornerRadius="15" Tag="3" AllowDrop="True"
+                                    DragEnter="Quadrant_DragEnter" DragOver="Quadrant_DragOver"
+                                    DragLeave="Quadrant_DragLeave" Drop="Quadrant_Drop"
+                                    Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource Q3BorderBrush}" BorderThickness="1">
                                 <Grid Margin="12,10,10,8">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -336,28 +373,31 @@
                                     </Grid.RowDefinitions>
                                     <Grid>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Ellipse Width="6" Height="6" Fill="{StaticResource AmberBrush}" />
+                                            <Ellipse Width="6" Height="6" Fill="{DynamicResource AmberBrush}" />
                                             <TextBlock Text="紧急 · 不重要" FontSize="11.5" FontWeight="SemiBold"
-                                                       Foreground="#EDE4D4" Margin="6,0,0,0" />
+                                                       Foreground="{DynamicResource Q3TitleBrush}" Margin="6,0,0,0" />
                                         </StackPanel>
                                         <TextBlock x:Name="Q3Count" Text="0" HorizontalAlignment="Right"
-                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="#B09365" />
+                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="{DynamicResource Q3CountBrush}" />
                                     </Grid>
                                     <Grid Grid.Row="1" Margin="0,6,0,0">
                                         <ScrollViewer VerticalContentAlignment="Top" HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                             <ItemsControl x:Name="Q3List" ItemTemplate="{StaticResource TaskMiniTemplate}" />
                                         </ScrollViewer>
                                         <TextBlock x:Name="Q3Empty" Text="尽量委托出去" FontSize="9.5"
-                                                   Foreground="#4F5D71" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFaintBrush}" HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" TextAlignment="Center" IsHitTestVisible="False" />
                                     </Grid>
                                     <TextBlock Grid.Row="2" Text="委托 · 简化 · 别全部揽下" FontSize="8.5"
-                                               Foreground="#4B596D" Margin="1,4,0,0" />
+                                               Foreground="{DynamicResource TextFaintBrush}" Margin="1,4,0,0" />
                                 </Grid>
                             </Border>
 
-                            <Border Grid.Row="1" Grid.Column="1" Margin="5,5,0,0" CornerRadius="15"
-                                    Background="#0CFFFFFF" BorderBrush="#1FFFFFFF" BorderThickness="1">
+                            <Border Grid.Row="1" Grid.Column="1" Margin="5,5,0,0"
+                                    CornerRadius="15" Tag="4" AllowDrop="True"
+                                    DragEnter="Quadrant_DragEnter" DragOver="Quadrant_DragOver"
+                                    DragLeave="Quadrant_DragLeave" Drop="Quadrant_Drop"
+                                    Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource Q4BorderBrush}" BorderThickness="1">
                                 <Grid Margin="12,10,10,8">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -366,23 +406,23 @@
                                     </Grid.RowDefinitions>
                                     <Grid>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Ellipse Width="6" Height="6" Fill="{StaticResource SlateBrush}" />
+                                            <Ellipse Width="6" Height="6" Fill="{DynamicResource SlateBrush}" />
                                             <TextBlock Text="不紧急 · 不重要" FontSize="11.5" FontWeight="SemiBold"
-                                                       Foreground="#D5DCE6" Margin="6,0,0,0" />
+                                                       Foreground="{DynamicResource Q4TitleBrush}" Margin="6,0,0,0" />
                                         </StackPanel>
                                         <TextBlock x:Name="Q4Count" Text="0" HorizontalAlignment="Right"
-                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="#77869A" />
+                                                   FontSize="11" FontFamily="{StaticResource NumberFont}" Foreground="{DynamicResource Q4CountBrush}" />
                                     </Grid>
                                     <Grid Grid.Row="1" Margin="0,6,0,0">
                                         <ScrollViewer VerticalContentAlignment="Top" HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                                             <ItemsControl x:Name="Q4List" ItemTemplate="{StaticResource TaskMiniTemplate}" />
                                         </ScrollViewer>
                                         <TextBlock x:Name="Q4Empty" Text="留白也很好" FontSize="9.5"
-                                                   Foreground="#4F5D71" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFaintBrush}" HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" TextAlignment="Center" IsHitTestVisible="False" />
                                     </Grid>
                                     <TextBlock Grid.Row="2" Text="有空再做 · 或者果断放弃" FontSize="8.5"
-                                               Foreground="#4B596D" Margin="1,4,0,0" />
+                                               Foreground="{DynamicResource TextFaintBrush}" Margin="1,4,0,0" />
                                 </Grid>
                             </Border>
                         </Grid>
@@ -401,7 +441,7 @@
                         <Grid Grid.Row="0" Margin="2,0,0,2">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock x:Name="MonthText" Text="2026年11月" FontSize="15" FontWeight="SemiBold"
-                                           Foreground="#E7EEF8" />
+                                           Foreground="{DynamicResource TextBrush}" />
                                 <Button Style="{StaticResource IconButton}" Content="&#xE76B;" Width="24" Height="24"
                                         FontFamily="{StaticResource IconFont}" FontSize="9" Margin="6,0,0,0"
                                         ToolTip="上个月" Click="PrevMonth_Click" />
@@ -414,16 +454,16 @@
                         </Grid>
 
                         <UniformGrid Grid.Row="1" Columns="7" Margin="2,6,2,3">
-                            <TextBlock Text="一" FontSize="9" Foreground="#66768C" HorizontalAlignment="Center" />
-                            <TextBlock Text="二" FontSize="9" Foreground="#66768C" HorizontalAlignment="Center" />
-                            <TextBlock Text="三" FontSize="9" Foreground="#66768C" HorizontalAlignment="Center" />
-                            <TextBlock Text="四" FontSize="9" Foreground="#66768C" HorizontalAlignment="Center" />
-                            <TextBlock Text="五" FontSize="9" Foreground="#66768C" HorizontalAlignment="Center" />
-                            <TextBlock Text="六" FontSize="9" Foreground="#66768C" HorizontalAlignment="Center" />
-                            <TextBlock Text="日" FontSize="9" Foreground="#66768C" HorizontalAlignment="Center" />
+                            <TextBlock Text="一" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="二" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="三" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="四" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="五" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="六" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="日" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
                         </UniformGrid>
 
-                        <Border Grid.Row="2" Background="#08FFFFFF" BorderBrush="#12FFFFFF" BorderThickness="1"
+                        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource SurfaceBackgroundBrush}" BorderThickness="1"
                                 CornerRadius="13" Padding="5,4">
                             <UniformGrid x:Name="CalendarGrid" Columns="7" Rows="6" />
                         </Border>
@@ -431,13 +471,18 @@
                         <Grid Grid.Row="3" Margin="2,8,0,3">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock x:Name="AgendaDateText" Text="11月20日 · 星期五" FontSize="12"
-                                           FontWeight="SemiBold" Foreground="#E1EAF5" />
-                                <Border Background="#12FFFFFF" CornerRadius="7" Padding="7,2" Margin="8,0,0,0">
-                                    <TextBlock x:Name="AgendaCountText" Text="0 项安排" FontSize="9" Foreground="#8494AA" />
+                                           FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" />
+                                <Border Background="{DynamicResource SurfaceBackgroundBrush}" CornerRadius="7" Padding="7,2" Margin="8,0,0,0">
+                                    <TextBlock x:Name="AgendaCountText" Text="0 项安排" FontSize="9" Foreground="{DynamicResource SubTextBrush}" />
                                 </Border>
                             </StackPanel>
-                            <Button Style="{StaticResource SmallAccentButton}" Content="+ 添加日程" HorizontalAlignment="Right"
-                                    Click="AddAgendaButton_Click" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button x:Name="TrayToggleButton" Style="{StaticResource TextButton}" Content="待办 0 ▾"
+                                        ToolTip="展开待办任务，拖到日期即可修改截止时间"
+                                        Click="ToggleTaskTray_Click" />
+                                <Button Style="{StaticResource SmallAccentButton}" Content="+ 添加日程" Margin="4,0,0,0"
+                                        Click="AddAgendaButton_Click" />
+                            </StackPanel>
                         </Grid>
 
                         <Grid Grid.Row="4" Margin="0,2,0,0">
@@ -447,13 +492,53 @@
                             <StackPanel x:Name="AgendaEmpty" VerticalAlignment="Center" HorizontalAlignment="Center"
                                         IsHitTestVisible="False" Margin="0,0,0,20">
                                 <TextBlock Text="&#xE787;" FontFamily="{StaticResource IconFont}" FontSize="24"
-                                           Foreground="#33445A" HorizontalAlignment="Center" />
-                                <TextBlock Text="这一天还没有安排" FontSize="10.5" Foreground="#5E6E84"
+                                           Foreground="{DynamicResource TextFaintBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="这一天还没有安排" FontSize="10.5" Foreground="{DynamicResource MutedBrush}"
                                            Margin="0,8,0,0" HorizontalAlignment="Center" />
                                 <TextBlock Text="点击右上角「添加日程」，给任务设一个截止时间" FontSize="8.5"
-                                           Foreground="#455469" Margin="0,4,0,0" HorizontalAlignment="Center" />
+                                           Foreground="{DynamicResource TextFaintBrush}" Margin="0,4,0,0" HorizontalAlignment="Center" />
                             </StackPanel>
                         </Grid>
+
+                        <Border x:Name="TaskTray" Grid.Row="4" Height="190" VerticalAlignment="Bottom" Panel.ZIndex="10"
+                                Visibility="Collapsed" Background="{DynamicResource OverlayPanelBrush}"
+                                BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1"
+                                CornerRadius="14" Padding="12,9" Margin="0,0,0,2">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.35" Color="#000000" />
+                            </Border.Effect>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="待办任务" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}" />
+                                        <TextBlock Text="拖到上方日期即可改截止时间" FontSize="8.5"
+                                                   Foreground="{DynamicResource MutedBrush}" Margin="9,2,0,0" />
+                                    </StackPanel>
+                                    <Button Style="{StaticResource IconButton}" Content="&#xE711;" Width="22" Height="22"
+                                            FontFamily="{StaticResource IconFont}" FontSize="9"
+                                            HorizontalAlignment="Right" Click="CloseTaskTray_Click" />
+                                </Grid>
+                                <Grid Grid.Row="1" Margin="0,5,0,0">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl x:Name="TrayTasksList" ItemTemplate="{StaticResource DragChipTemplate}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                    <TextBlock x:Name="TrayEmpty" Text="没有待办任务" FontSize="9.5"
+                                               Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" IsHitTestVisible="False" />
+                                </Grid>
+                            </Grid>
+                        </Border>
                     </Grid>
 
                     <!-- 番茄钟 -->
@@ -464,8 +549,8 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <Border Grid.Row="0" HorizontalAlignment="Center" Background="#0CFFFFFF"
-                                BorderBrush="#16FFFFFF" BorderThickness="1" CornerRadius="11" Padding="3">
+                        <Border Grid.Row="0" HorizontalAlignment="Center" Background="{DynamicResource CardBackgroundBrush}"
+                                BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1" CornerRadius="11" Padding="3">
                             <UniformGrid Columns="3">
                                 <RadioButton x:Name="FocusModeTab" Style="{StaticResource NavTab}" GroupName="TimerMode"
                                              Content="专注" Width="78" Height="28" IsChecked="True" Checked="TimerMode_Checked" Tag="focus" />
@@ -479,12 +564,12 @@
                         <StackPanel Grid.Row="1" VerticalAlignment="Center">
                             <Grid Width="226" Height="226" HorizontalAlignment="Center">
                                 <controls:ProgressRing x:Name="TimerRing" Progress="0" StrokeThickness="9"
-                                                       TrackBrush="#1AFFFFFF" AccentBrush="{StaticResource AccentBrush}" />
+                                                       TrackBrush="{DynamicResource ProgressTrackBrush}" AccentBrush="{DynamicResource AccentBrush}" />
                                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <TextBlock x:Name="TimerModeLabel" Text="专 注" FontSize="9.5" Foreground="#7F90A6"
+                                    <TextBlock x:Name="TimerModeLabel" Text="专 注" FontSize="9.5" Foreground="{DynamicResource MutedBrush}"
                                                HorizontalAlignment="Center" />
                                     <TextBlock x:Name="TimerText" Text="25:00" FontSize="47" FontFamily="{StaticResource NumberFont}"
-                                               FontWeight="Light" Foreground="#F4F9FD" HorizontalAlignment="Center"
+                                               FontWeight="Light" Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center"
                                                Margin="0,2,0,2" />
                                     <StackPanel x:Name="SessionDotsPanel" Orientation="Horizontal" HorizontalAlignment="Center"
                                                 Margin="0,2,0,0" />
@@ -496,7 +581,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="关联任务" FontSize="10" Foreground="#718198" VerticalAlignment="Center"
+                                <TextBlock Text="关联任务" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
                                            Margin="0,0,9,0" />
                                 <ComboBox x:Name="FocusTaskCombo" Grid.Column="1" Style="{StaticResource DarkCombo}"
                                           DisplayMemberPath="Title" SelectionChanged="FocusTaskCombo_SelectionChanged" />
@@ -516,8 +601,8 @@
 
                         <Grid Grid.Row="2" Margin="2,0,2,0">
                             <TextBlock x:Name="FocusStatsText" Text="今日专注 0 次 · 0 分钟" FontSize="9.5"
-                                       Foreground="#718198" />
-                            <TextBlock x:Name="CycleText" Text="第 1 轮" FontSize="9.5" Foreground="#5C6C82"
+                                       Foreground="{DynamicResource MutedBrush}" />
+                            <TextBlock x:Name="CycleText" Text="第 1 轮" FontSize="9.5" Foreground="{DynamicResource MutedBrush}"
                                        HorizontalAlignment="Right" />
                         </Grid>
                     </Grid>
@@ -526,21 +611,21 @@
                 <!-- 底部状态 -->
                 <Grid Grid.Row="3" Margin="22,0,20,10">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="4" Height="4" Fill="{StaticResource AccentBrush}" Opacity="0.8" />
-                        <TextBlock x:Name="SaveStatusText" Text="已保存到本地" FontSize="8.5" Foreground="#52627A"
+                        <Ellipse Width="4" Height="4" Fill="{DynamicResource AccentBrush}" Opacity="0.8" />
+                        <TextBlock x:Name="SaveStatusText" Text="已保存到本地" FontSize="8.5" Foreground="{DynamicResource MutedBrush}"
                                    Margin="5,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="Ctrl+Alt+M 呼出 / 隐藏" FontSize="8.5" Foreground="#425168"
+                    <TextBlock Text="Ctrl+Alt+M 呼出 / 隐藏" FontSize="8.5" Foreground="{DynamicResource TextFaintBrush}"
                                HorizontalAlignment="Right" />
                 </Grid>
             </Grid>
         </Border>
 
         <!-- 全部任务 -->
-        <Border x:Name="AllTasksOverlay" Visibility="Collapsed" Background="#B0060A10" CornerRadius="22"
+        <Border x:Name="AllTasksOverlay" Visibility="Collapsed" Background="{DynamicResource OverlayBackdropBrush}" CornerRadius="22"
               MouseLeftButtonDown="OverlayBackdrop_Click">
-            <Border Width="356" MaxHeight="620" VerticalAlignment="Center" Background="#FC151D2A"
-                    BorderBrush="#2AFFFFFF" BorderThickness="1" CornerRadius="20" Padding="20,18"
+            <Border Width="356" MaxHeight="620" VerticalAlignment="Center" Background="{DynamicResource OverlayPanelBrush}"
+                    BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="20,18"
                     MouseLeftButtonDown="OverlayCard_Click">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.5" Color="#000000" />
@@ -556,7 +641,7 @@
                         <StackPanel>
                             <TextBlock Text="全部任务" Style="{StaticResource OverlayTitle}" />
                             <TextBlock x:Name="AllTasksCountText" Text="0 项任务" FontSize="9.5"
-                                       Foreground="{StaticResource MutedBrush}" Margin="0,3,0,0" />
+                                       Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0" />
                         </StackPanel>
                         <Button Style="{StaticResource IconButton}" Content="&#xE711;" FontFamily="{StaticResource IconFont}"
                                 FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Top"
@@ -564,7 +649,7 @@
                     </Grid>
 
                     <Grid Grid.Row="1" Margin="0,14,0,8">
-                        <Border HorizontalAlignment="Left" Background="#0CFFFFFF" CornerRadius="10" Padding="3">
+                        <Border HorizontalAlignment="Left" Background="{DynamicResource CardBackgroundBrush}" CornerRadius="10" Padding="3">
                             <StackPanel Orientation="Horizontal">
                                 <RadioButton x:Name="AllFilterPending" Style="{StaticResource NavTab}" Content="未完成"
                                              GroupName="AllFilter" Width="64" Height="26" IsChecked="True"
@@ -585,12 +670,12 @@
                         <ScrollViewer VerticalContentAlignment="Top" HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <ItemsControl x:Name="AllTasksList" ItemTemplate="{StaticResource AllTaskTemplate}" />
                         </ScrollViewer>
-                        <TextBlock x:Name="AllTasksEmpty" Text="这里还没有任务" FontSize="10" Foreground="#52627A"
+                        <TextBlock x:Name="AllTasksEmpty" Text="这里还没有任务" FontSize="10" Foreground="{DynamicResource MutedBrush}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
                     </Grid>
 
                     <Grid Grid.Row="3" Margin="0,12,0,0">
-                        <TextBlock Text="点击任务可编辑 · 勾选完成" FontSize="8.5" Foreground="#425168"
+                        <TextBlock Text="点击任务可编辑 · 勾选完成" FontSize="8.5" Foreground="{DynamicResource TextFaintBrush}"
                                    VerticalAlignment="Center" />
                         <Button Style="{StaticResource SecondaryButton}" Content="关闭" Width="76" Height="32"
                                 HorizontalAlignment="Right" Click="CloseAllTasks_Click" />
@@ -600,10 +685,10 @@
         </Border>
 
         <!-- 新建 / 编辑任务 -->
-        <Border x:Name="TaskEditor" Visibility="Collapsed" Background="#B0060A10" CornerRadius="22"
+        <Border x:Name="TaskEditor" Visibility="Collapsed" Background="{DynamicResource OverlayBackdropBrush}" CornerRadius="22"
               MouseLeftButtonDown="OverlayBackdrop_Click">
-            <Border Margin="18" MaxHeight="650" VerticalAlignment="Center" Background="#FC151D2A"
-                    BorderBrush="#2AFFFFFF" BorderThickness="1" CornerRadius="20" Padding="20,18"
+            <Border Margin="18" MaxHeight="650" VerticalAlignment="Center" Background="{DynamicResource OverlayPanelBrush}"
+                    BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="20,18"
                     MouseLeftButtonDown="OverlayCard_Click">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.5" Color="#000000" />
@@ -618,7 +703,7 @@
                     <Grid>
                         <StackPanel>
                             <TextBlock x:Name="TaskEditorTitle" Text="新建任务" Style="{StaticResource OverlayTitle}" />
-                            <TextBlock Text="把事情写下来，大脑就可以放下了" FontSize="9" Foreground="#62728A" Margin="0,3,0,0" />
+                            <TextBlock Text="把事情写下来，大脑就可以放下了" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0" />
                         </StackPanel>
                         <Button Style="{StaticResource IconButton}" Content="&#xE711;" FontFamily="{StaticResource IconFont}"
                                 FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Top"
@@ -652,7 +737,7 @@
                                 <TextBox x:Name="DueTimeBox" Grid.Column="1" Style="{StaticResource InputBox}" Height="34"
                                          Margin="7,0,0,0" MaxLength="5" ToolTip="24 小时制，例如 18:30"
                                          TextChanged="DueTimeBox_TextChanged" />
-                                <TextBlock Grid.Column="2" Text="时:分" FontSize="9" Foreground="#5E6E84"
+                                <TextBlock Grid.Column="2" Text="时:分" FontSize="9" Foreground="{DynamicResource MutedBrush}"
                                            VerticalAlignment="Center" Margin="7,0,0,0" />
                             </Grid>
                             <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
@@ -669,21 +754,21 @@
                                           Checked="Priority_Changed" Unchecked="Priority_Changed" />
                                 <CheckBox x:Name="UrgentCheck" Style="{StaticResource PillToggle}" Content="紧急"
                                           Margin="8,0,0,0" Checked="Priority_Changed" Unchecked="Priority_Changed" />
-                                <TextBlock Text="重要看价值，紧急看时间" FontSize="8.5" Foreground="#4E5E74"
+                                <TextBlock Text="重要看价值，紧急看时间" FontSize="8.5" Foreground="{DynamicResource MutedBrush}"
                                            VerticalAlignment="Center" Margin="10,0,0,0" />
                             </StackPanel>
 
-                            <Border Background="#0BFFFFFF" BorderBrush="#18FFFFFF" BorderThickness="1"
+                            <Border Background="{DynamicResource SurfaceBackgroundBrush}" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1"
                                     CornerRadius="11" Padding="11,9" Margin="0,12,0,0">
                                 <StackPanel Orientation="Horizontal">
-                                    <Ellipse x:Name="QuadrantPreviewDot" Width="7" Height="7" Fill="{StaticResource CoralBrush}"
+                                    <Ellipse x:Name="QuadrantPreviewDot" Width="7" Height="7" Fill="{DynamicResource CoralBrush}"
                                              VerticalAlignment="Center" />
                                     <TextBlock x:Name="QuadrantPreviewText" Text="将归入：重要 · 紧急" FontSize="10"
-                                               Foreground="#B9C6D8" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                               Foreground="{DynamicResource SubTextBrush}" Margin="7,0,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Border>
 
-                            <TextBlock x:Name="TaskEditorError" Text="" FontSize="9.5" Foreground="{StaticResource CoralBrush}"
+                            <TextBlock x:Name="TaskEditorError" Text="" FontSize="9.5" Foreground="{DynamicResource CoralBrush}"
                                        Margin="1,8,0,0" TextWrapping="Wrap" />
                         </StackPanel>
                     </ScrollViewer>
@@ -703,10 +788,10 @@
         </Border>
 
         <!-- 设置 -->
-        <Border x:Name="SettingsOverlay" Visibility="Collapsed" Background="#B0060A10" CornerRadius="22"
+        <Border x:Name="SettingsOverlay" Visibility="Collapsed" Background="{DynamicResource OverlayBackdropBrush}" CornerRadius="22"
               MouseLeftButtonDown="OverlayBackdrop_Click">
-            <Border Margin="18" MaxHeight="620" VerticalAlignment="Center" Background="#FC151D2A"
-                    BorderBrush="#2AFFFFFF" BorderThickness="1" CornerRadius="20" Padding="20,18"
+            <Border Margin="18" MaxHeight="620" VerticalAlignment="Center" Background="{DynamicResource OverlayPanelBrush}"
+                    BorderBrush="{DynamicResource OverlayBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="20,18"
                     MouseLeftButtonDown="OverlayCard_Click">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.5" Color="#000000" />
@@ -720,7 +805,7 @@
                     <Grid>
                         <StackPanel>
                             <TextBlock Text="设置" Style="{StaticResource OverlayTitle}" />
-                            <TextBlock Text="让云笺更适合你的桌面" FontSize="9" Foreground="#62728A" Margin="0,3,0,0" />
+                            <TextBlock Text="让云笺更适合你的桌面" FontSize="9" Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0" />
                         </StackPanel>
                         <Button Style="{StaticResource IconButton}" Content="&#xE711;" FontFamily="{StaticResource IconFont}"
                                 FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Top"
@@ -730,6 +815,91 @@
                     <ScrollViewer Grid.Row="1" Margin="0,6,0,4" VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Disabled" MaxHeight="470">
                         <StackPanel>
+                            <TextBlock Text="外观" Style="{StaticResource SectionLabel}" />
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="主题" Style="{StaticResource SettingTitle}" />
+                                    <TextBlock Text="深色适合夜间，浅色更适合明亮桌面" Style="{StaticResource SettingDesc}" />
+                                </StackPanel>
+                                <Border Grid.Column="1" Background="{DynamicResource SurfaceBackgroundBrush}"
+                                        BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1"
+                                        CornerRadius="10" Padding="3" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton x:Name="ThemeDarkTab" Style="{StaticResource NavTab}" Content="深色"
+                                                     GroupName="AppTheme" Width="48" Height="26" Tag="Dark"
+                                                     Checked="Theme_Checked" />
+                                        <RadioButton x:Name="ThemeLightTab" Style="{StaticResource NavTab}" Content="浅色"
+                                                     GroupName="AppTheme" Width="48" Height="26" Tag="Light"
+                                                     Checked="Theme_Checked" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="强调色" Style="{StaticResource SettingTitle}" />
+                                    <TextBlock Text="按钮、勾选、进度环与选中态" Style="{StaticResource SettingDesc}" />
+                                </StackPanel>
+                                <StackPanel x:Name="AccentSwatchesPanel" Grid.Column="1" Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <RadioButton Style="{StaticResource ColorSwatch}" GroupName="AccentColor"
+                                                 Tag="#6EE7D8" ToolTip="薄荷" Checked="Accent_Checked">
+                                        <Ellipse Width="16" Height="16" Fill="#6EE7D8" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ColorSwatch}" GroupName="AccentColor"
+                                                 Tag="#6CB8FF" ToolTip="天蓝" Checked="Accent_Checked">
+                                        <Ellipse Width="16" Height="16" Fill="#6CB8FF" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ColorSwatch}" GroupName="AccentColor"
+                                                 Tag="#A78BFA" ToolTip="靛紫" Checked="Accent_Checked">
+                                        <Ellipse Width="16" Height="16" Fill="#A78BFA" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ColorSwatch}" GroupName="AccentColor"
+                                                 Tag="#FFC46B" ToolTip="暖橙" Checked="Accent_Checked">
+                                        <Ellipse Width="16" Height="16" Fill="#FFC46B" />
+                                    </RadioButton>
+                                    <RadioButton Style="{StaticResource ColorSwatch}" GroupName="AccentColor"
+                                                 Tag="#FF7A7A" ToolTip="珊瑚" Checked="Accent_Checked">
+                                        <Ellipse Width="16" Height="16" Fill="#FF7A7A" />
+                                    </RadioButton>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,2">
+                                <TextBlock Text="卡片背景透明度" Style="{StaticResource SettingTitle}" />
+                                <TextBlock x:Name="OpacityValueText" Text="96%" HorizontalAlignment="Right"
+                                           FontSize="10" Foreground="{DynamicResource SubTextBrush}" />
+                            </Grid>
+                            <Slider x:Name="OpacitySlider" Style="{StaticResource ThemeSlider}"
+                                    Minimum="65" Maximum="100" Value="96" Margin="0,2,0,12"
+                                    ValueChanged="Opacity_ValueChanged" />
+
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="字号缩放" Style="{StaticResource SettingTitle}" />
+                                    <TextBlock Text="按比例放大字号、间距与控件" Style="{StaticResource SettingDesc}" />
+                                </StackPanel>
+                                <ComboBox x:Name="ScaleCombo" Grid.Column="1" Width="86" Style="{StaticResource DarkCombo}"
+                                          VerticalAlignment="Center" SelectionChanged="Scale_SelectionChanged">
+                                    <ComboBoxItem Content="90%" Tag="0.9" />
+                                    <ComboBoxItem Content="100%" Tag="1.0" />
+                                    <ComboBoxItem Content="110%" Tag="1.1" />
+                                    <ComboBoxItem Content="120%" Tag="1.2" />
+                                </ComboBox>
+                            </Grid>
+
                             <TextBlock Text="桌面组件" Style="{StaticResource SectionLabel}" />
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
@@ -817,11 +987,11 @@
                             </Grid>
 
                             <TextBlock Text="数据" Style="{StaticResource SectionLabel}" />
-                            <Border Background="#0AFFFFFF" BorderBrush="#14FFFFFF" BorderThickness="1"
+                            <Border Background="{DynamicResource CardBackgroundBrush}" BorderBrush="{DynamicResource SurfaceBorderBrush}" BorderThickness="1"
                                     CornerRadius="10" Padding="10,8">
                                 <StackPanel>
                                     <TextBlock Text="本地存档" Style="{StaticResource SettingTitle}" FontSize="10.5" />
-                                    <TextBlock x:Name="DataPathText" FontSize="8.5" Foreground="#5E6E84"
+                                    <TextBlock x:Name="DataPathText" FontSize="8.5" Foreground="{DynamicResource MutedBrush}"
                                                TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
                                 </StackPanel>
                             </Border>
@@ -833,12 +1003,12 @@
                             </StackPanel>
 
                             <TextBlock x:Name="VersionText" Text="云笺 v1.0 · 本地优先，数据不上传" FontSize="8.5"
-                                       Foreground="#48586E" Margin="1,14,0,0" />
+                                       Foreground="{DynamicResource MutedBrush}" Margin="1,14,0,0" />
                         </StackPanel>
                     </ScrollViewer>
 
                     <Grid Grid.Row="2" Margin="0,8,0,0">
-                        <Button Style="{StaticResource TextButton}" Content="退出云笺" Foreground="{StaticResource CoralBrush}"
+                        <Button Style="{StaticResource TextButton}" Content="退出云笺" Foreground="{DynamicResource CoralBrush}"
                                 HorizontalAlignment="Left" Click="ExitApp_Click" />
                         <Button Style="{StaticResource PrimaryButton}" Content="完成" Width="82" Height="34"
                                 HorizontalAlignment="Right" Click="CloseSettings_Click" />
@@ -849,14 +1019,14 @@
 
         <!-- 轻提示 -->
         <Border x:Name="ToastBar" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="18,0,18,44"
-                Background="#F5232D3D" BorderBrush="#2EFFFFFF" BorderThickness="1" CornerRadius="12"
+                Background="{DynamicResource ToastBackgroundBrush}" BorderBrush="{DynamicResource ToastBorderBrush}" BorderThickness="1" CornerRadius="12"
                 Padding="14,9" Opacity="0" IsHitTestVisible="False" Panel.ZIndex="20">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4" Color="#000000" />
             </Border.Effect>
             <StackPanel Orientation="Horizontal">
-                <Ellipse Width="6" Height="6" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
-                <TextBlock x:Name="ToastText" Text="" FontSize="10.5" Foreground="#DFE8F3" Margin="7,0,0,0"
+                <Ellipse Width="6" Height="6" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="ToastText" Text="" FontSize="10.5" Foreground="{DynamicResource TextBrush}" Margin="7,0,0,0"
                            VerticalAlignment="Center" />
                 <Button x:Name="ToastUndoButton" Style="{StaticResource TextButton}" Content="撤销" FontSize="10"
                         Margin="6,0,0,0" Visibility="Collapsed" Click="ToastUndo_Click" />

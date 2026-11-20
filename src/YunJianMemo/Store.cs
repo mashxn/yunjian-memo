@@ -116,13 +116,31 @@ public static class Store
         s.ShortBreakMinutes = Math.Clamp(s.ShortBreakMinutes, 1, 60);
         s.LongBreakMinutes = Math.Clamp(s.LongBreakMinutes, 1, 120);
         s.LongBreakAfter = Math.Clamp(s.LongBreakAfter, 2, 8);
+        if (s.Theme != "Light" && s.Theme != "Dark") s.Theme = "Dark";
+        if (!IsValidAccent(s.AccentColor)) s.AccentColor = "#6EE7D8";
+        s.CardOpacity = Math.Clamp(s.CardOpacity, 0.65, 1.0);
+        s.UiScale = Math.Clamp(s.UiScale, 0.9, 1.2);
         if (s.WindowWidth < 340 || s.WindowWidth > 760) s.WindowWidth = 408;
-        if (s.WindowHeight < 560 || s.WindowHeight > 1200) s.WindowHeight = 712;
+        if (s.WindowHeight < 560 || s.WindowHeight > 1200) s.WindowHeight = 700;
 
         var timer = data.Timer;
         if (timer.RemainingSeconds < 0 || timer.RemainingSeconds > 3 * 60 * 60)
             timer.RemainingSeconds = s.FocusMinutes * 60.0;
         if (timer.FocusStreak < 0) timer.FocusStreak = 0;
+    }
+
+    private static bool IsValidAccent(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        try
+        {
+            var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(value);
+            return color.A > 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static void TryQuarantineBrokenFile()
