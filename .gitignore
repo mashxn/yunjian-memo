@@ -1,0 +1,22 @@
+# 构建产物
+bin/
+obj/
+src/**/bin/
+src/**/obj/
+
+# 本地发布 / 打包产物
+release/
+*.pdb
+*.user
+*.suo
+.vs/
+.vscode/
+
+# 测试与回收站
+.test/
+_trash/
+
+# 运行时数据（正常不会出现在仓库，此处兜底）
+data.json
+data.backup.json
+data.corrupt-*.json
