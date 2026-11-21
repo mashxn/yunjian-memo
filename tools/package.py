@@ -4,7 +4,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 root = Path(__file__).resolve().parent.parent
 release = root / "release"
 release.mkdir(exist_ok=True)
-target = release / "云笺备忘录-v1.1.0.zip"
+target = release / "云笺备忘录-v1.1.1.zip"
 
 items = [
     root / "README.md",

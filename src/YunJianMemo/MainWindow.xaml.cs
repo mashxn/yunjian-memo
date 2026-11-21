@@ -142,6 +142,15 @@ public partial class MainWindow : Window
         _initializing = true;
         SetInitialWindowBounds();
         ApplyDesktopMode(showToast: false);
+        var startupSizeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+        startupSizeTimer.Tick += (_, _) =>
+        {
+            startupSizeTimer.Stop();
+            if (_reallyClosing) return;
+            Width = 420 * Math.Clamp(_data.Settings.UiScale, 0.9, 1.2);
+            Height = 700 * Math.Clamp(_data.Settings.UiScale, 0.9, 1.2);
+        };
+        startupSizeTimer.Start();
         if (_data.Settings.AutoStart) StartupManager.SetEnabled(true);
         SetupTray();
         RestorePomodoroTimer();
